@@ -1,0 +1,1719 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>短视频</title>
+<style>
+:root {
+  --text: #141418;
+  --text-2: #8a8a90;
+  --line: rgba(0,0,0,.07);
+  --bg: #eceef2;
+  --card: #ffffff;
+  --tabbar-h: 58px;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-t: env(safe-area-inset-top, 0px);
+  --tabbar-gap: calc(10px + var(--safe-b));
+
+  --g1-bg: rgba(16, 18, 24, 0.38);
+  --g1-bg-focus: rgba(16, 18, 24, 0.58);
+  --g1-edge: rgba(255, 255, 255, 0.24);
+  --g1-hi: rgba(255, 255, 255, 0.35);
+  --g1-blur: blur(16px) saturate(160%);
+
+  --g2-bg: rgba(250, 250, 252, 0.92);
+  --g2-edge: rgba(255, 255, 255, 0.95);
+  --g2-blur: blur(24px) saturate(180%);
+  --g2-shadow: 0 -12px 44px rgba(18, 20, 30, 0.22);
+}
+body.dark {
+  --text: #ecedf1;
+  --text-2: #96969e;
+  --line: rgba(255, 255, 255, 0.09);
+  --bg: #0e0e11;
+  --card: #1b1b20;
+  --g2-bg: rgba(24, 25, 31, 0.92);
+  --g2-edge: rgba(255, 255, 255, 0.13);
+  --g2-shadow: 0 -12px 44px rgba(0, 0, 0, 0.55);
+}
+body[data-surface="video"] {
+  --bar-bg: rgba(20, 22, 29, 0.44);
+  --bar-edge: rgba(255, 255, 255, 0.20);
+  --bar-hi: rgba(255, 255, 255, 0.30);
+  --bar-ink: rgba(255, 255, 255, 0.58);
+  --bar-ink-on: #ffffff;
+  --bar-thumb: rgba(255, 255, 255, 0.22);
+  --bar-thumb-shadow: 0 4px 14px rgba(0, 0, 0, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  --bar-shadow: 0 14px 38px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+body[data-surface="app"] {
+  --bar-bg: rgba(255, 255, 255, 0.80);
+  --bar-edge: rgba(255, 255, 255, 0.98);
+  --bar-hi: rgba(255, 255, 255, 1);
+  --bar-ink: rgba(20, 20, 26, 0.50);
+  --bar-ink-on: #0d0d12;
+  --bar-thumb: rgba(255, 255, 255, 1);
+  --bar-thumb-shadow: 0 4px 14px rgba(18, 20, 30, 0.14), inset 0 1px 0 #fff;
+  --bar-shadow: 0 14px 38px rgba(18, 20, 30, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+body.dark[data-surface="app"] {
+  --bar-bg: rgba(30, 31, 39, 0.82);
+  --bar-edge: rgba(255, 255, 255, 0.14);
+  --bar-hi: rgba(255, 255, 255, 0.18);
+  --bar-ink: rgba(255, 255, 255, 0.52);
+  --bar-ink-on: #ffffff;
+  --bar-thumb: rgba(255, 255, 255, 0.18);
+  --bar-thumb-shadow: 0 4px 14px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.26);
+  --bar-shadow: 0 14px 38px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", Roboto, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  -webkit-user-select: none;
+}
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+input { font-family: inherit; }
+svg { display: block; }
+
+.page { position: fixed; inset: 0; display: none; background: var(--bg); overflow: hidden; }
+.page.active { display: block; }
+#page-home { background: #000; }
+#page-box.active { display: flex; flex-direction: column; }
+#page-profile { background: var(--bg); padding-bottom: calc(96px + var(--safe-b)); overflow-y: auto; -webkit-overflow-scrolling: touch; }
+
+/* ============ 底部导航 ============ */
+.tabbar {
+  position: fixed;
+  left: 50%;
+  bottom: var(--tabbar-gap);
+  transform: translateX(-50%);
+  width: min(318px, calc(100vw - 40px));
+  height: var(--tabbar-h);
+  padding: 5px;
+  background-color: var(--bar-bg);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  backdrop-filter: blur(18px) saturate(180%);
+  border: 1px solid var(--bar-edge);
+  border-radius: 29px;
+  box-shadow: var(--bar-shadow);
+  display: flex;
+  align-items: stretch;
+  z-index: 200;
+  touch-action: none;
+  overflow: hidden;
+  isolation: isolate;
+  transition: background-color .38s, box-shadow .38s, border-color .38s, transform .42s cubic-bezier(.22, 1.12, .36, 1), opacity .25s;
+  will-change: transform;
+}
+body.kb-open .tabbar { opacity: 0; pointer-events: none; transform: translateX(-50%) translateY(20px) scale(0.95); }
+
+.tabbar::before {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 0;
+  background: radial-gradient(130% 100% at 20% 0%, var(--bar-hi), transparent 46%), radial-gradient(90% 120% at 90% 110%, rgba(255,255,255,.10), transparent 60%);
+  opacity: .85;
+}
+.tabbar.pressing { transform: translateX(-50%) scale(1.062); }
+.tabbar.dragging { transform: translateX(-50%) scale(1.03); }
+
+.tab-thumb {
+  position: absolute; top: 5px; left: 5px;
+  width: calc((100% - 10px) / 3);
+  height: calc(var(--tabbar-h) - 10px);
+  border-radius: 24px;
+  background-color: var(--bar-thumb);
+  box-shadow: var(--bar-thumb-shadow);
+  transition: transform .34s cubic-bezier(.34, 1.18, .64, 1), background-color .38s;
+  z-index: 1; pointer-events: none;
+}
+.tab-thumb::before {
+  content: ''; position: absolute; inset: 0; border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255,255,255,.55), transparent 55%);
+  opacity: .55;
+}
+
+.tabbar-item {
+  flex: 1; position: relative; z-index: 2;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px;
+  color: var(--bar-ink); font-size: 10px; font-weight: 500;
+  transition: color .22s, transform .22s cubic-bezier(.34, 1.2, .64, 1);
+}
+.tabbar-item svg { width: 20px; height: 20px; transition: transform .25s; }
+.tabbar-item.active { color: var(--bar-ink-on); font-weight: 600; }
+.tabbar-item.active svg { transform: scale(1.06); }
+@media (prefers-reduced-motion: reduce) {
+  .tabbar, .tab-thumb, .tabbar-item, .tabbar-item svg { transition-duration: .01ms; }
+}/* ============ 首页顶部 & 搜索交互 ============ */
+.home-top {
+  position: absolute; top: calc(10px + var(--safe-t)); left: 0; right: 0; padding: 0 12px;
+  display: flex; align-items: center; z-index: 30;
+}
+.category-tabs {
+  display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+  transition: all .3s cubic-bezier(.32,.74,0,1);
+  transform-origin: left center; max-width: 200px;
+}
+.home-top.searching .category-tabs {
+  max-width: 0; opacity: 0; transform: translateX(-10px); overflow: hidden; margin-right: 0;
+}
+.search-bar-wrap {
+  display: flex; align-items: center; flex: 1; margin-left: 12px; justify-content: flex-end;
+  transition: all .3s cubic-bezier(.32,.74,0,1);
+}
+.search-box {
+  display: flex; align-items: center; height: 32px;
+  width: 100%; max-width: 38vw;
+  background: var(--g1-bg); -webkit-backdrop-filter: var(--g1-blur); backdrop-filter: var(--g1-blur);
+  border-radius: 18px; padding: 0 3px 0 10px; border: 1px solid var(--g1-edge);
+  box-shadow: inset 0 1px 0 var(--g1-hi), 0 4px 14px rgba(0,0,0,.26);
+  transition: all .3s cubic-bezier(.32,.74,0,1);
+  cursor: text;
+}
+.home-top.searching .search-box {
+  max-width: 100%; background: var(--g1-bg-focus); border-color: rgba(255,255,255,.52);
+}
+.search-icon {
+  width: 15px; height: 15px; stroke: #fff; opacity: .9; flex-shrink: 0;
+  transition: opacity .2s; margin-right: 6px;
+}
+.search-input {
+  flex: 1; min-width: 0; height: 100%; border: none; outline: none;
+  background: transparent; font-size: 12px; color: #fff;
+}
+.search-input::placeholder { color: rgba(255,255,255,.62); font-size: 12px; }
+.search-input::-webkit-search-cancel-button { display: none; }
+.search-submit-btn {
+  display: none; align-items: center; justify-content: center;
+  height: 26px; padding: 0 14px; border-radius: 13px;
+  background: #fff; color: #111; font-size: 12px; font-weight: 600;
+  margin-left: 8px; flex-shrink: 0; transition: transform .15s;
+}
+.search-submit-btn:active { transform: scale(.95); }
+.home-top.searching .search-submit-btn { display: flex; }
+.search-cancel-btn {
+  display: none; flex-shrink: 0; color: #fff; font-size: 13px; font-weight: 500;
+  margin-left: 12px; opacity: 0; transition: opacity .2s .1s;
+}
+.home-top.searching .search-cancel-btn { display: block; opacity: 1; }
+
+.cat-btn {
+  position: relative; padding: 5px 0 7px; font-size: 13px; font-weight: 500;
+  color: rgba(255,255,255,.68); text-shadow: 0 1px 4px rgba(0,0,0,.7); transition: color .2s; white-space: nowrap;
+}
+.cat-btn.active { color: #fff; font-weight: 700; font-size: 14px; }
+.cat-btn.active::after {
+  content: ''; position: absolute; left: 50%; bottom: 0; transform: translateX(-50%);
+  width: 14px; height: 3px; border-radius: 999px; background: #fff;
+}
+
+.feed-loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); z-index: 20; display: none; }
+.feed-loading.show { display: block; }
+
+/* ============ 视频流 ============ */
+.feed { height: 100%; overflow-y: scroll; scroll-snap-type: y mandatory; overscroll-behavior: contain; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.feed::-webkit-scrollbar { display: none; }
+.slide {
+  position: relative; height: 100%; scroll-snap-align: start; scroll-snap-stop: always;
+  background: #000; overflow: hidden; display: flex; align-items: flex-start; justify-content: center;
+  padding-top: calc(44px + var(--safe-t));
+}
+.slide video { width: 100%; height: 100%; object-fit: contain; object-position: top center; display: block; background: #000; -webkit-user-drag: none; }
+.slide.is-landscape { padding-top: 0; align-items: center; }
+.slide.is-landscape video { object-position: center center; }
+
+.pause-indicator {
+  position: absolute; top: 50%; left: 50%; width: 72px; height: 72px; border-radius: 50%;
+  background: rgba(0,0,0,.36); -webkit-backdrop-filter: blur(10px) saturate(150%); backdrop-filter: blur(10px) saturate(150%);
+  border: 1px solid rgba(255,255,255,.18); box-shadow: 0 10px 28px rgba(0,0,0,.4);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transform: translate(-50%,-50%) scale(.8); transition: opacity .16s, transform .2s cubic-bezier(.34,1.3,.64,1);
+  pointer-events: none; z-index: 4;
+}
+.pause-indicator svg { width: 26px; height: 26px; color: #fff; margin-left: 4px; }
+.slide.paused .pause-indicator { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+
+/* ============ 极致流畅的可展开操作栏 ============ */
+.actions-dock {
+  position: fixed; right: 12px; bottom: 156px;
+  width: 48px; height: 48px; display: none;
+  z-index: 60; pointer-events: auto;
+}
+.slide.current-slide .actions-dock { display: block; }
+
+.settings-btn {
+  position: absolute; inset: 0; border-radius: 50%;
+  background: var(--g1-bg); -webkit-backdrop-filter: var(--g1-blur); backdrop-filter: var(--g1-blur);
+  border: 1px solid var(--g1-edge); box-shadow: inset 0 1px 0 var(--g1-hi), 0 4px 14px rgba(0,0,0,.28);
+  color: #fff; display: flex; align-items: center; justify-content: center;
+  transition: transform .14s cubic-bezier(.34,1.3,.64,1), background .18s, border-color .18s;
+  z-index: 3;
+}
+.settings-btn:active { transform: scale(.86); }
+.settings-btn svg { width: 22px; height: 22px; transition: transform .3s cubic-bezier(.34,1.3,.64,1); }
+.actions-dock.open .settings-btn svg { transform: rotate(45deg); }
+
+/* 核心优化：绝对定位向上悬浮，使用物理阻尼动画 */
+.action-list {
+  position: absolute;
+  bottom: 60px; /* 在设置按钮正上方留白 */
+  left: 50%; transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+.action-group {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  opacity: 0;
+  transform: translateY(40px) scale(0.7);
+  transform-origin: bottom center;
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease;
+  will-change: transform, opacity;
+}
+.actions-dock.open .action-group {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+/* 展开：从下往上依次弹出（越靠下的越快出现，第6个是刷新，第1个是上一个视频） */
+.actions-dock.open .action-group:nth-child(6) { transition-delay: 0.04s; }
+.actions-dock.open .action-group:nth-child(5) { transition-delay: 0.08s; }
+.actions-dock.open .action-group:nth-child(4) { transition-delay: 0.12s; }
+.actions-dock.open .action-group:nth-child(3) { transition-delay: 0.16s; }
+.actions-dock.open .action-group:nth-child(2) { transition-delay: 0.20s; }
+.actions-dock.open .action-group:nth-child(1) { transition-delay: 0.24s; }
+
+/* 收起：瞬间一把收拢，不拖泥带水 */
+.actions-dock:not(.open) .action-group {
+  transition-delay: 0s;
+  transition-duration: 0.22s;
+  transition-timing-function: ease-in;
+}
+
+.action-btn {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: var(--g1-bg); -webkit-backdrop-filter: var(--g1-blur); backdrop-filter: var(--g1-blur);
+  border: 1px solid var(--g1-edge); box-shadow: inset 0 1px 0 var(--g1-hi), 0 4px 14px rgba(0,0,0,.28);
+  color: #fff; display: flex; align-items: center; justify-content: center;
+  transition: transform .14s cubic-bezier(.34,1.3,.64,1), background .18s, color .18s;
+}
+.action-btn:active { transform: scale(.86); }
+.action-btn svg { width: 22px; height: 22px; }
+.action-btn.liked, .action-btn.faved { background: #fff; border-color: #fff; color: #0d0d12; box-shadow: 0 6px 18px rgba(0,0,0,.32); }
+.action-btn.liked svg, .action-btn.faved svg { fill: currentColor; }
+.action-btn.muted .wave { display: none; }
+.action-btn .slash { display: none; }
+.action-btn.muted .slash { display: block; }
+.action-count { color: #fff; font-size: 10px; font-weight: 500; text-shadow: 0 1px 3px rgba(0,0,0,.6); }
+
+/* 进度条 */
+.progress {
+  position: absolute; left: clamp(12px,4vw,20px); right: clamp(12px,4vw,20px); bottom: 94px;
+  padding: 26px 0 0; z-index: 6; touch-action: none; cursor: pointer;
+}
+.progress-track { position: relative; height: 5px; border-radius: 999px; background: rgba(255,255,255,.26); }
+.progress-fill {
+  position: relative; height: 100%; width: 0%; border-radius: 999px; background: #fff; box-shadow: 0 0 10px rgba(255,255,255,.6);
+}
+.progress-fill::after {
+  content: ''; position: absolute; right: -8px; top: 50%; width: 16px; height: 16px; border-radius: 50%; background: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,.4); transform: translateY(-50%) scale(0); transition: transform .18s cubic-bezier(.34,1.3,.64,1);
+}
+.progress.dragging .progress-fill::after { transform: translateY(-50%) scale(1); }
+
+.fullscreen-btn {
+  position: absolute; right: clamp(12px,4vw,20px); bottom: 114px; display: none; align-items: center; gap: 5px;
+  padding: 6px 12px; border-radius: 999px; background: var(--g1-bg);
+  -webkit-backdrop-filter: var(--g1-blur); backdrop-filter: var(--g1-blur);
+  border: 1px solid var(--g1-edge); box-shadow: inset 0 1px 0 var(--g1-hi), 0 4px 14px rgba(0,0,0,.28);
+  color: #fff; font-size: 11px; font-weight: 500; z-index: 7;
+}
+.fullscreen-btn svg { width: 15px; height: 15px; }
+.slide.is-landscape .fullscreen-btn { display: flex; }
+
+.heart-pop {
+  position: fixed; width: 88px; height: 88px; transform: translate(-50%,-50%) scale(0);
+  pointer-events: none; z-index: 300; animation: heartPop .72s cubic-bezier(.22,1.2,.36,1) forwards;
+}
+.heart-pop svg { width: 100%; height: 100%; filter: drop-shadow(0 6px 14px rgba(0,0,0,.4)); }
+@keyframes heartPop {
+  0% { transform: translate(-50%,-50%) scale(0); opacity: 0; }
+  25% { transform: translate(-50%,-50%) scale(1.3); opacity: 1; }
+  50% { transform: translate(-50%,-50%) scale(1); opacity: 1; }
+  100% { transform: translate(-50%,-100%) scale(1.08); opacity: 0; }
+}/* ============ 收藏箱 ============ */
+.box-header {
+  flex-shrink: 0; position: relative; z-index: 2; background: var(--card); padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--line); box-shadow: 0 4px 20px rgba(18,20,30,.05);
+}
+.box-title { font-size: 17px; font-weight: 700; margin-bottom: 12px; color: var(--text); }
+.segmented { display: flex; background: rgba(0,0,0,.05); border-radius: 14px; padding: 3px; }
+body.dark .segmented { background: rgba(255,255,255,.07); }
+.seg-btn {
+  flex: 1; height: 30px; border-radius: 11px; font-size: 13px; color: var(--text-2); transition: background .18s, color .18s, box-shadow .18s;
+}
+.seg-btn.active { background: var(--card); color: var(--text); font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,.10), inset 0 0 0 1px var(--line); }
+body.dark .seg-btn.active { background: #2c2c34; }
+.box-search {
+  display: flex; align-items: center; gap: 8px; height: 36px; border-radius: 18px;
+  background: rgba(0,0,0,.045); padding: 0 14px; margin-top: 10px; color: var(--text-2); font-size: 13px;
+}
+body.dark .box-search { background: rgba(255,255,255,.06); }
+.box-search svg { width: 16px; height: 16px; flex-shrink: 0; }
+.box-search.has-filter { background: rgba(0,0,0,.09); color: var(--text); font-weight: 600; }
+body.dark .box-search.has-filter { background: rgba(255,255,255,.13); color: #fff; }
+
+.box-list { flex: 1; overflow-y: auto; padding: 8px 12px calc(96px + var(--safe-b)); -webkit-overflow-scrolling: touch; }
+.box-date-title { font-size: 12px; color: var(--text-2); font-weight: 600; margin: 14px 4px 8px; }
+.box-item {
+  display: flex; align-items: center; gap: 12px; background: var(--card); border: 1px solid var(--line);
+  border-radius: 18px; padding: 10px; margin-bottom: 9px; box-shadow: 0 2px 10px rgba(18,20,30,.05);
+  transition: transform .16s cubic-bezier(.34,1.2,.64,1);
+}
+.box-item:active { transform: scale(.985); }
+.box-thumb { width: 54px; height: 72px; border-radius: 11px; overflow: hidden; background: rgba(0,0,0,.06); flex-shrink: 0; }
+body.dark .box-thumb { background: rgba(255,255,255,.08); }
+.box-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.box-meta { flex: 1; min-width: 0; }
+.box-item-title {
+  font-size: 14px; line-height: 1.4; margin-bottom: 6px; color: var(--text); font-weight: 500;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.box-item-author { font-size: 12px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.box-remove {
+  width: 30px; height: 30px; border-radius: 50%; background: rgba(0,0,0,.05); color: var(--text-2);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+body.dark .box-remove { background: rgba(255,255,255,.08); }
+.box-remove svg { width: 14px; height: 14px; }
+.empty { padding: 80px 20px; text-align: center; color: var(--text-2); font-size: 14px; }
+.empty svg { width: 46px; height: 46px; margin: 0 auto 14px; opacity: .22; }
+
+/* ============ 个人主页 ============ */
+.profile-login { min-height: calc(100vh - 140px); display: none; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 20px; }
+.profile-login.show { display: flex; }
+.profile-login h2 { font-size: 19px; color: var(--text); margin-bottom: 10px; font-weight: 600; }
+.login-btn {
+  width: 268px; height: 56px; border-radius: 18px; font-size: 15px; font-weight: 600;
+  display: flex; align-items: center; gap: 12px; padding: 0 18px; color: #fff;
+  transition: transform .16s cubic-bezier(.34,1.2,.64,1), filter .16s;
+}
+.login-btn:active { transform: scale(.97); filter: brightness(.94); }
+.login-btn.wx { background: #07C160; box-shadow: 0 8px 22px rgba(7,193,96,.28); }
+.login-btn.qq { background: #12B7F5; box-shadow: 0 8px 22px rgba(18,183,245,.28); }
+.login-btn svg { width: 28px; height: 28px; flex-shrink: 0; }
+.login-btn span { flex: 1; text-align: left; }
+
+.profile-main { display: none; padding: 16px; }
+.profile-main.show { display: block; }
+.profile-hero {
+  display: flex; align-items: center; gap: 14px; padding: 18px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 22px; margin-bottom: 12px;
+  box-shadow: 0 2px 12px rgba(18,20,30,.05);
+}
+.profile-avatar {
+  width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(150deg,#38383f,#111114);
+  display: flex; align-items: center; justify-content: center; color: #fff; font-size: 24px; font-weight: 700;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 6px 18px rgba(0,0,0,.28); flex-shrink: 0;
+}
+.profile-name { font-size: 17px; font-weight: 700; color: var(--text); }
+.profile-id { font-size: 12px; color: var(--text-2); margin-top: 4px; }
+.profile-stats { display: flex; gap: 22px; margin-top: 9px; }
+.profile-stats .stat { font-size: 12px; color: var(--text-2); }
+.profile-stats .stat b { color: var(--text); font-size: 15px; margin-right: 3px; font-weight: 700; }
+
+.setting-card { background: var(--card); border: 1px solid var(--line); border-radius: 22px; margin-bottom: 12px; overflow: hidden; box-shadow: 0 2px 12px rgba(18,20,30,.05); }
+.setting-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--line); font-size: 14px; color: var(--text); }
+.setting-row:last-child { border-bottom: none; }
+.setting-row input[type=range] { width: 140px; accent-color: #111; }
+body.dark .setting-row input[type=range] { accent-color: #fff; }
+.setting-row select { background: rgba(0,0,0,.05); color: var(--text); border: none; border-radius: 10px; padding: 6px 10px; font-size: 13px; }
+body.dark .setting-row select { background: rgba(255,255,255,.08); }
+.danger-btn { width: 100%; padding: 14px; border-radius: 18px; background: #141418; color: #fff; font-size: 15px; font-weight: 600; margin-top: 4px; }
+.logout-btn { width: 100%; padding: 14px; border-radius: 18px; background: var(--card); color: var(--text); border: 1px solid var(--line); font-size: 15px; font-weight: 600; }
+
+/* ============ 浮层与弹窗 ============ */
+.player-overlay { position: fixed; inset: 0; background: #000; z-index: 500; display: none; align-items: center; justify-content: center; }
+.player-overlay.active { display: flex; }
+.player-overlay video { width: 100%; height: 100%; object-fit: contain; background: #000; }
+.overlay-close {
+  position: absolute; top: calc(14px + var(--safe-t)); right: 14px; width: 40px; height: 40px; border-radius: 50%;
+  background: var(--g1-bg); -webkit-backdrop-filter: var(--g1-blur); backdrop-filter: var(--g1-blur); border: 1px solid var(--g1-edge);
+  box-shadow: inset 0 1px 0 var(--g1-hi), 0 6px 18px rgba(0,0,0,.3); color: #fff; display: flex; align-items: center; justify-content: center; z-index: 501;
+}
+.overlay-close svg { width: 20px; height: 20px; }
+
+.sheet-mask { position: fixed; inset: 0; background: rgba(8,10,16,.42); z-index: 600; opacity: 0; pointer-events: none; transition: opacity .26s; }
+.sheet-mask.active { opacity: 1; pointer-events: auto; }
+.sheet, .date-sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; background: var(--g2-bg);
+  -webkit-backdrop-filter: var(--g2-blur); backdrop-filter: var(--g2-blur); border-top: 1px solid var(--g2-edge);
+  border-radius: 28px 28px 0 0; z-index: 601; transform: translateY(102%); transition: transform .34s cubic-bezier(.32,.74,0,1);
+  padding: 10px 20px calc(20px + var(--safe-b)); overflow-y: auto; -webkit-overflow-scrolling: touch; box-shadow: var(--g2-shadow); color: var(--text);
+}
+.date-sheet { z-index: 602; padding-bottom: calc(18px + var(--safe-b)); max-height: 78vh; }
+.sheet { max-height: 62vh; }
+.sheet.active, .date-sheet.active { transform: translateY(0); }
+.sheet-handle { width: 36px; height: 4px; border-radius: 999px; background: rgba(0,0,0,.14); margin: 0 auto 14px; }
+body.dark .sheet-handle { background: rgba(255,255,255,.2); }
+.sheet-title { font-size: 16px; font-weight: 700; margin-bottom: 18px; color: var(--text); }
+.sheet-section { margin-bottom: 20px; }
+.sheet-label { font-size: 13px; color: var(--text-2); margin-bottom: 10px; }
+
+.speed-list { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+.speed-btn { height: 38px; border-radius: 14px; background: rgba(0,0,0,.05); color: var(--text); font-size: 13px; font-weight: 500; transition: background .16s, color .16s, transform .16s; }
+body.dark .speed-btn { background: rgba(255,255,255,.07); }
+.speed-btn:active { transform: scale(.95); }
+.speed-btn.active { background: #111; color: #fff; box-shadow: 0 4px 12px rgba(0,0,0,.22); }
+body.dark .speed-btn.active { background: #f2f2f5; color: #111; }
+
+.sheet-actions { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
+.sheet-action { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 12px 4px; border-radius: 16px; background: rgba(0,0,0,.05); color: var(--text); font-size: 11px; transition: background .16s, color .16s, transform .16s; }
+body.dark .sheet-action { background: rgba(255,255,255,.07); }
+.sheet-action:active { transform: scale(.95); }
+.sheet-action svg { width: 22px; height: 22px; }
+.sheet-action.active { background: #111; color: #fff; }
+body.dark .sheet-action.active { background: #f2f2f5; color: #111; }
+.sheet-action.active svg { fill: currentColor; }
+.sheet-close { width: 100%; height: 44px; border-radius: 16px; background: rgba(0,0,0,.05); color: var(--text-2); font-size: 14px; font-weight: 500; margin-top: 4px; }
+body.dark .sheet-close { background: rgba(255,255,255,.07); }
+
+.date-year-row { display: flex; align-items: center; justify-content: space-between; margin: 2px 0 14px; }
+.year-nav { width: 34px; height: 34px; border-radius: 50%; background: rgba(0,0,0,.05); color: var(--text-2); display: flex; align-items: center; justify-content: center; }
+body.dark .year-nav { background: rgba(255,255,255,.07); }
+.year-nav:disabled { opacity: .3; }
+.year-nav svg { width: 16px; height: 16px; }
+.year-label { font-size: 17px; font-weight: 700; color: var(--text); }
+.month-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 14px; }
+.month-btn { height: 36px; border-radius: 12px; background: rgba(0,0,0,.05); font-size: 13px; color: var(--text); transition: background .16s, color .16s; }
+body.dark .month-btn { background: rgba(255,255,255,.07); }
+.month-btn.active { background: #111; color: #fff; }
+body.dark .month-btn.active { background: #f2f2f5; color: #111; }
+.day-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 6px; margin-bottom: 16px; }
+.day-btn { height: 36px; border-radius: 50%; background: rgba(0,0,0,.05); font-size: 13px; color: var(--text); transition: background .16s, color .16s; }
+body.dark .day-btn { background: rgba(255,255,255,.07); }
+.day-btn.active { background: #111; color: #fff; }
+body.dark .day-btn.active { background: #f2f2f5; color: #111; }
+.day-btn.empty { background: transparent; pointer-events: none; }
+.date-actions { display: flex; gap: 10px; }
+.date-clear, .date-confirm { flex: 1; height: 44px; border-radius: 16px; font-size: 14px; font-weight: 500; }
+.date-clear { background: rgba(0,0,0,.05); color: var(--text-2); }
+body.dark .date-clear { background: rgba(255,255,255,.07); }
+.date-confirm { background: #111; color: #fff; box-shadow: 0 6px 18px rgba(0,0,0,.22); }
+body.dark .date-confirm { background: #f2f2f5; color: #111; }
+
+.toast { position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%); background: rgba(18,20,26,.82); -webkit-backdrop-filter: blur(12px) saturate(160%); backdrop-filter: blur(12px) saturate(160%); border: 1px solid rgba(255,255,255,.14); border-radius: 14px; box-shadow: 0 12px 34px rgba(0,0,0,.4); color: #fff; padding: 10px 20px; font-size: 13px; z-index: 999; opacity: 0; transition: opacity .22s; pointer-events: none; max-width: 80vw; text-align: center; }
+.toast.show { opacity: 1; }
+
+.splash { position: fixed; inset: 0; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; z-index: 900; color: #fff; transition: opacity .26s; }
+.splash.hide { opacity: 0; pointer-events: none; }
+.splash p { font-size: 13px; color: #999; }
+.spinner { width: 26px; height: 26px; border-radius: 50%; border: 2.5px solid rgba(255,255,255,.16); border-top-color: #fff; animation: spin .8s linear infinite; }
+.retry-btn { padding: 8px 22px; border-radius: 16px; background: #fff; color: #111; font-size: 13px; font-weight: 600; display: none; }
+.splash-video-overlay { position: fixed; inset: 0; background: #000; z-index: 999; display: none; align-items: center; justify-content: center; }
+.splash-video-overlay.active { display: flex; }
+.splash-video-overlay video { width: 100%; height: 100%; object-fit: cover; background: #000; }
+.splash-skip { position: absolute; top: calc(16px + var(--safe-t)); right: 16px; padding: 7px 16px; border-radius: 16px; background: rgba(16,18,24,.42); -webkit-backdrop-filter: blur(10px) saturate(150%); backdrop-filter: blur(10px) saturate(150%); border: 1px solid rgba(255,255,255,.2); color: #fff; font-size: 12px; font-weight: 500; z-index: 2; }
+</style>
+</head><body data-surface="video">
+
+<div class="splash-video-overlay" id="splashVideoOverlay">
+  <video id="splashVideo" playsinline webkit-playsinline muted preload="auto"></video>
+  <button class="splash-skip" id="splashSkip">跳过</button>
+</div>
+
+<section class="page active" id="page-home" data-page="home">
+  <div class="feed" id="feed"></div>
+  <div class="home-top" id="homeTop">
+    <div class="category-tabs" id="categoryTabs">
+      <button class="cat-btn active" data-cat="recommend">推荐</button>
+      <button class="cat-btn" data-cat="hot">热门</button>
+      <button class="cat-btn" data-cat="local">近期</button>
+    </div>
+    <div class="search-bar-wrap">
+      <div class="search-box" id="searchBox">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+          <circle cx="11" cy="11" r="6.6"/><path d="M20 20l-3.6-3.6"/>
+        </svg>
+        <input class="search-input" id="searchInput" type="search" placeholder="搜索" enterkeyhint="search" autocomplete="off">
+        <button class="search-submit-btn" id="searchSubmitBtn">搜索</button>
+      </div>
+      <button class="search-cancel-btn" id="searchCancelBtn">取消</button>
+    </div>
+  </div>
+  <div class="feed-loading" id="feedLoading"><div class="spinner"></div></div>
+</section>
+
+<section class="page" id="page-box" data-page="box">
+  <div class="box-header">
+    <div class="box-title">收藏箱</div>
+    <div class="segmented">
+      <button class="seg-btn active" data-tab="like">点赞</button>
+      <button class="seg-btn" data-tab="fav">收藏</button>
+    </div>
+    <div class="box-search" id="boxSearch">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+        <rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/>
+      </svg>
+      <span id="boxSearchLabel">按日期查找</span>
+    </div>
+  </div>
+  <div class="box-list" id="boxList"></div>
+</section>
+
+<section class="page" id="page-profile" data-page="profile">
+  <div class="profile-login" id="profileLogin">
+    <h2>登录哦哟短视频</h2>
+    <button class="login-btn wx" id="loginWx">
+      <svg viewBox="0 0 48 48"><path fill="currentColor" d="M19.6 12c-6.4 0-11.6 4.3-11.6 9.6 0 3 1.6 5.7 4.1 7.5l-1 3.6 4.2-2.1c1.3.4 2.8.6 4.3.6h.9c-.3-.9-.4-1.9-.4-2.9 0-5.4 5-9.7 11.2-9.7h.8C31.2 14.8 26 12 19.6 12z"/><path fill="currentColor" d="M34.2 21c-5.2 0-9.4 3.6-9.4 8s4.2 8 9.4 8c1.1 0 2.2-.2 3.2-.5l3.4 1.8-.8-3c2-1.5 3.3-3.8 3.3-6.3 0-4.4-4.2-8-9.1-8z"/><circle cx="16" cy="20.2" r="1.7" fill="#07C160"/><circle cx="23.4" cy="20.2" r="1.7" fill="#07C160"/><circle cx="31.2" cy="27.6" r="1.4" fill="#07C160"/><circle cx="37.2" cy="27.6" r="1.4" fill="#07C160"/></svg>
+      <span>微信登录</span>
+    </button>
+    <button class="login-btn qq" id="loginQq">
+      <svg viewBox="0 0 48 48"><path fill="currentColor" d="M24 8c-5.3 0-9.4 4-9.4 8.9 0 1.2.2 2.3.6 3.3-1.4 2-2.7 4.4-2.7 6.6 0 .8.3 1.2.9 1.2.9 0 2-.7 2.9-1.4.9 1.6 2.4 2.9 4.2 3.7-.5.5-1 1.1-1 1.8 0 1.5 1.9 1.6 4.5.9 2.6.7 4.5.6 4.5-.9 0-.7-.5-1.3-1-1.8 1.8-.8 3.3-2.1 4.2-3.7.9.7 2 1.4 2.9 1.4.6 0 .9-.4.9-1.2 0-2.2-1.3-4.6-2.7-6.6.4-1 .6-2.1.6-3.3C33.4 12 29.3 8 24 8z"/><ellipse cx="20.4" cy="17.4" rx="2.1" ry="2.5" fill="#12B7F5"/><ellipse cx="27.6" cy="17.4" rx="2.1" ry="2.5" fill="#12B7F5"/><path d="M21.6 22.4c.8.9 1.5 1.3 2.4 1.3s1.6-.4 2.4-1.3" stroke="#12B7F5" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>
+      <span>QQ 登录</span>
+    </button>
+  </div>
+
+  <div class="profile-main" id="profileMain">
+    <div class="profile-hero">
+      <div class="profile-avatar" id="profileAvatar">哦</div>
+      <div>
+        <div class="profile-name" id="profileName">未登录</div>
+        <div class="profile-id" id="profileId">ID: oy_000000</div>
+        <div class="profile-stats">
+          <div class="stat"><b id="statLike">0</b>赞</div>
+          <div class="stat"><b id="statFav">0</b>藏</div>
+        </div>
+      </div>
+    </div>
+    <div class="setting-card">
+      <div class="setting-row">
+        <label>屏幕亮度</label>
+        <input type="range" id="brightnessRange" min="40" max="100" value="100">
+      </div>
+      <div class="setting-row">
+        <label>主题模式</label>
+        <select id="themeSelect">
+          <option value="light">浅色</option>
+          <option value="dark">深色</option>
+          <option value="system">跟随系统</option>
+        </select>
+      </div>
+    </div>
+    <button class="danger-btn" id="clearDataBtn">清除全部点赞 / 收藏</button>
+    <button class="logout-btn" id="logoutBtn" style="margin-top:10px;">退出登录</button>
+  </div>
+</section>
+
+<nav class="tabbar" id="tabbar">
+  <div class="tab-thumb" id="tabThumb"></div>
+  <button class="tabbar-item active" data-page="home" aria-label="主页">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3.5 10.6 12 3.6l8.5 7V19a1.4 1.4 0 0 1-1.4 1.4H15v-6.3H9v6.3H4.9A1.4 1.4 0 0 1 3.5 19z"/>
+    </svg><span>主页</span>
+  </button>
+  <button class="tabbar-item" data-page="box" aria-label="收藏箱">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M18.5 20.5 12 16.2l-6.5 4.3V5.2A1.7 1.7 0 0 1 7.2 3.5h9.6a1.7 1.7 0 0 1 1.7 1.7z"/>
+    </svg><span>收藏箱</span>
+  </button>
+  <button class="tabbar-item" data-page="profile" aria-label="我的">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="8.2" r="3.9"/><path d="M4.4 20.5c0-3.8 3.4-5.7 7.6-5.7s7.6 1.9 7.6 5.7"/>
+    </svg><span>我的</span>
+  </button>
+</nav>
+
+<div class="player-overlay" id="playerOverlay">
+  <button class="overlay-close" id="overlayClose" aria-label="关闭">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+      <path d="M6 6l12 12M18 6L6 18"/>
+    </svg>
+  </button>
+  <video id="overlayVideo" controls playsinline webkit-playsinline></video>
+</div>
+
+<div class="sheet-mask" id="sheetMask"></div>
+
+<div class="sheet" id="settingsSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">播放设置</div>
+  <div class="sheet-section">
+    <div class="sheet-label">播放速度</div>
+    <div class="speed-list" id="speedList">
+      <button class="speed-btn" data-speed="0.5">0.5x</button>
+      <button class="speed-btn" data-speed="0.75">0.75x</button>
+      <button class="speed-btn active" data-speed="1">1.0x</button>
+      <button class="speed-btn" data-speed="1.25">1.25x</button>
+      <button class="speed-btn" data-speed="1.5">1.5x</button>
+      <button class="speed-btn" data-speed="2">2.0x</button>
+    </div>
+  </div>
+  <div class="sheet-section">
+    <div class="sheet-label">更多操作</div>
+    <div class="sheet-actions">
+      <button class="sheet-action" id="sheetMute">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 5 6.5 9H3v6h3.5L11 19z"/><path class="wave" d="M15.4 8.8a4.6 4.6 0 0 1 0 6.4"/><path class="wave" d="M18.4 6.2a8.6 8.6 0 0 1 0 11.6"/><path class="slash" d="M4.5 4.5l15 15"/>
+        </svg><span id="sheetMuteLabel">静音</span>
+      </button>
+      <button class="sheet-action" id="sheetFav">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M12 3.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z"/></svg>
+        <span id="sheetFavLabel">收藏</span>
+      </button>
+      <button class="sheet-action" id="sheetLike">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M12 20.4S3.6 14.9 3.6 9.2A4.7 4.7 0 0 1 12 6a4.7 4.7 0 0 1 8.4 3.2c0 5.7-8.4 11.2-8.4 11.2z"/></svg>
+        <span id="sheetLikeLabel">点赞</span>
+      </button>
+      <button class="sheet-action" id="sheetCopy">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="9" y="9" width="11.5" height="11.5" rx="2.6"/><path d="M5.6 15H4.4A1.9 1.9 0 0 1 2.5 13V4.4A1.9 1.9 0 0 1 4.4 2.5H13A1.9 1.9 0 0 1 15 4.4v1.2"/>
+        </svg><span>复制链接</span>
+      </button>
+    </div>
+  </div>
+  <button class="sheet-close" id="sheetClose">关闭</button>
+</div>
+
+<div class="date-sheet" id="dateSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">按日期查找</div>
+  <div class="date-year-row">
+    <button class="year-nav" id="yearPrev" aria-label="上一年">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+    </button>
+    <div class="year-label" id="yearLabel">2026年</div>
+    <button class="year-nav" id="yearNext" aria-label="下一年">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
+    </button>
+  </div>
+  <div class="month-grid" id="monthGrid"></div>
+  <div class="day-grid" id="dayGrid"></div>
+  <div class="date-actions">
+    <button class="date-clear" id="dateClear">显示全部</button>
+    <button class="date-confirm" id="dateConfirm">确定</button>
+  </div>
+</div>
+
+<div class="splash" id="splash">
+  <div class="spinner" id="splashSpinner"></div>
+  <p id="splashText">正在加载视频…</p>
+  <button class="retry-btn" id="retryBtn">重新加载</button>
+</div>
+
+<script>
+(function () {
+  'use strict';const SPLASH_VIDEO_URL = '1.mp4';
+const RANDOM_API = 'https://v.api.aa1.cn/api/api-vs/index.php';
+const KEY_LIKE = 'oy_liked', KEY_FAV = 'oy_faved';
+const KEY_LOGIN = 'oy_login', KEY_THEME = 'oy_theme', KEY_BRIGHT = 'oy_brightness';
+
+const $ = (id) => document.getElementById(id);
+const state = {
+  videos: [], current: 0,
+  liked: loadStore(KEY_LIKE), faved: loadStore(KEY_FAV),
+  boxTab: 'like', category: 'recommend',
+  loading: false, muted: false, speed: 1,
+  actionsOpen: false
+};
+
+const feedEl = $('feed'), boxListEl = $('boxList');
+const splashEl = $('splash'), splashSpinner = $('splashSpinner');
+const splashText = $('splashText'), retryBtn = $('retryBtn');
+const feedLoadingEl = $('feedLoading'), categoryTabs = $('categoryTabs');
+const homeTop = $('homeTop');
+const searchInput = $('searchInput'), searchBox = $('searchBox');
+const searchSubmitBtn = $('searchSubmitBtn'), searchCancelBtn = $('searchCancelBtn');
+const sheetMask = $('sheetMask'), settingsSheet = $('settingsSheet');
+const speedList = $('speedList');
+const boxSearchEl = $('boxSearch'), boxSearchLabel = $('boxSearchLabel');
+const dateSheet = $('dateSheet'), yearLabel = $('yearLabel');
+const monthGrid = $('monthGrid'), dayGrid = $('dayGrid');
+const yearPrev = $('yearPrev'), yearNext = $('yearNext');
+const dateClear = $('dateClear'), dateConfirm = $('dateConfirm');
+const splashVideoOverlay = $('splashVideoOverlay');
+const splashVideo = $('splashVideo'), splashSkip = $('splashSkip');
+const profileLogin = $('profileLogin'), profileMain = $('profileMain');
+const profileAvatar = $('profileAvatar'), profileName = $('profileName');
+const profileId = $('profileId'), statLike = $('statLike'), statFav = $('statFav');
+const brightnessRange = $('brightnessRange'), themeSelect = $('themeSelect');
+const clearDataBtn = $('clearDataBtn'), logoutBtn = $('logoutBtn');
+const loginWx = $('loginWx'), loginQq = $('loginQq');
+const tabbar = $('tabbar'), tabThumb = $('tabThumb');
+const tabs = Array.from(tabbar.querySelectorAll('.tabbar-item'));
+
+let sheetVideo = null, sheetVideoEl = null;
+let boxItems = [], boxFilterDate = null;
+let scrollRaf = null, switching = false, clearStep = 0;
+let splashPlayed = false, splashFallbackTimer = null;
+
+/* ---------- 键盘弹出修复 ---------- */
+function setupKeyboardFix() {
+  if (!window.visualViewport) return;
+  const vv = window.visualViewport;
+  let raf = null;
+  const apply = () => {
+    if (raf) return;
+    raf = requestAnimationFrame(() => {
+      raf = null;
+      const keyboardH = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      if (keyboardH > 80) {
+        document.body.classList.add('kb-open');
+        if (document.activeElement === searchInput) pauseAll();
+      } else {
+        document.body.classList.remove('kb-open');
+      }
+    });
+  };
+  vv.addEventListener('resize', apply);
+  vv.addEventListener('scroll', apply);
+}
+
+function loadStore(key) {
+  try { const v = JSON.parse(localStorage.getItem(key)); return (v && typeof v === 'object') ? v : {}; }
+  catch (e) { return {}; }
+}
+function saveStore(key, obj) { try { localStorage.setItem(key, JSON.stringify(obj)); } catch (e) {} }
+function escapeHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function fmtCount(n) {
+  n = Number(n) || 0;
+  if (n >= 10000) return (n / 10000).toFixed(1).replace(/\.0$/, '') + '万';
+  return String(n);
+}
+function pad2(n) { return String(n).padStart(2, '0'); }
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast'; t.textContent = msg;
+  document.body.appendChild(t);
+  requestAnimationFrame(() => t.classList.add('show'));
+  setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, 1700);
+}
+function randomPublishTime(daysRange) {
+  return Date.now() - Math.floor(Math.random() * daysRange * 24 * 60 * 60 * 1000);
+}
+
+function setSurface(name) {
+  if (document.body.dataset.surface !== name) document.body.dataset.surface = name;
+}
+function applyTheme(mode) {
+  localStorage.setItem(KEY_THEME, mode);
+  document.body.classList.remove('dark');
+  if (mode === 'dark') document.body.classList.add('dark');
+  else if (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    document.body.classList.add('dark');
+  }
+  themeSelect.value = mode;
+}
+function applyBrightness(v) {
+  v = Number(v) || 100;
+  localStorage.setItem(KEY_BRIGHT, String(v));
+  document.body.style.filter = 'brightness(' + v + '%)';
+  brightnessRange.value = v;
+}
+themeSelect.addEventListener('change', () => applyTheme(themeSelect.value));
+brightnessRange.addEventListener('input', () => applyBrightness(brightnessRange.value));
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  if (localStorage.getItem(KEY_THEME) === 'system') applyTheme('system');
+});
+
+function doLogin(type) {
+  const info = { type, name: type === 'wx' ? '微信用户' : 'QQ 用户', id: 'oy_' + Math.floor(100000 + Math.random() * 900000), loginAt: Date.now() };
+  localStorage.setItem(KEY_LOGIN, JSON.stringify(info));
+  renderProfile();
+  showToast(type === 'wx' ? '微信登录成功' : 'QQ 登录成功');
+}
+loginWx.addEventListener('click', () => doLogin('wx'));
+loginQq.addEventListener('click', () => doLogin('qq'));
+logoutBtn.addEventListener('click', () => {
+  localStorage.removeItem(KEY_LOGIN);
+  renderProfile();
+  showToast('已退出登录');
+});
+
+function renderProfile() {
+  const info = JSON.parse(localStorage.getItem(KEY_LOGIN) || 'null');
+  if (info) {
+    profileLogin.classList.remove('show');
+    profileMain.classList.add('show');
+    profileAvatar.textContent = String(info.name || '?').trim().charAt(0) || '?';
+    profileName.textContent = info.name;
+    profileId.textContent = 'ID: ' + info.id;
+    statLike.textContent = Object.keys(state.liked).length;
+    statFav.textContent = Object.keys(state.faved).length;
+  } else {
+    profileLogin.classList.add('show');
+    profileMain.classList.remove('show');
+  }
+}
+
+clearDataBtn.addEventListener('click', () => {
+  if (clearStep === 0) {
+    if (confirm('确定要清除所有点赞和收藏吗？此操作不可恢复！')) {
+      clearStep = 1;
+      clearDataBtn.textContent = '再点一次确认清除';
+      showToast('请再点一次确认');
+    }
+  } else {
+    state.liked = {}; state.faved = {};
+    saveStore(KEY_LIKE, state.liked);
+    saveStore(KEY_FAV, state.faved);
+    clearStep = 0;
+    clearDataBtn.textContent = '清除全部点赞 / 收藏';
+    refreshFeedButtonsAll();
+    renderBox();
+    renderProfile();
+    showToast('已全部清除');
+  }
+});
+
+function playSplashVideo() {
+  if (splashPlayed || !SPLASH_VIDEO_URL) return;
+  splashPlayed = true;
+  splashVideoOverlay.classList.add('active');
+  pauseAll();
+  splashVideo.muted = true;
+  splashVideo.playsInline = true;
+  splashVideo.preload = 'auto';
+  splashVideo.src = SPLASH_VIDEO_URL;
+  const start = () => {
+    clearTimeout(splashFallbackTimer);
+    const p = splashVideo.play();
+    if (p && p.catch) p.catch(() => {
+      splashVideo.muted = true;
+      const p2 = splashVideo.play();
+      if (p2 && p2.catch) p2.catch(closeSplashVideo);
+    });
+  };
+  if (splashVideo.readyState >= 1) start();
+  else {
+    splashVideo.addEventListener('loadedmetadata', start, { once: true });
+    splashFallbackTimer = setTimeout(() => { if (splashVideo.readyState < 1) closeSplashVideo(); }, 3500);
+  }
+}
+function closeSplashVideo() {
+  clearTimeout(splashFallbackTimer);
+  if (!splashVideoOverlay.classList.contains('active')) return;
+  splashVideoOverlay.classList.remove('active');
+  try { splashVideo.pause(); } catch (e) {}
+  splashVideo.removeAttribute('src');
+  try { splashVideo.load(); } catch (e) {}
+  if (!document.hidden) updatePlayback();
+}
+splashVideo.addEventListener('ended', closeSplashVideo);
+splashVideo.addEventListener('error', closeSplashVideo);
+splashSkip.addEventListener('click', closeSplashVideo);
+
+setupKeyboardFix();
+
+async function fetchRandomVideo() {
+  const res = await fetch(RANDOM_API + '?t=' + Date.now(), { cache: 'no-store' });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const data = await res.json();
+  if (!data || !data.url) throw new Error('数据异常');
+  return {
+    id: String(data.url),
+    title: data.title || '这个视频还没有标题',
+    author: data.up || '匿名用户',
+    cover: data.tu || '',
+    url: data.url,
+    likes: Math.floor(Math.random() * 28000) + 320,
+    publishTime: randomPublishTime(state.category === 'local' ? 7 : 30)
+  };
+}
+
+async function loadMore(count) {
+  if (state.loading) return;
+  state.loading = true;
+  for (let i = 0; i < count; i++) {
+    try {
+      const v = await fetchRandomVideo();
+      if (!state.videos.some(x => x.id === v.id)) { state.videos.push(v); appendSlide(v); }
+    } catch (e) { console.warn('视频获取失败', e); break; }
+  }
+  state.loading = false;
+}
+
+function tryPlay(el) {
+  el.muted = state.muted;
+  const p = el.play();
+  if (p && p.catch) p.catch(() => {
+    el.muted = true;
+    const p2 = el.play();
+    if (p2 && p2.catch) p2.catch(() => {});
+  });
+}
+
+function enterFullscreenLandscape(el) {
+  if (/iPad|iPhone|iPod/.test(navigator.userAgent) && el.webkitEnterFullscreen) {
+    try { el.webkitEnterFullscreen(); } catch (e) {}
+    return;
+  }
+  const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
+  if (!req) { showToast('当前环境不支持全屏'); return; }
+  el.controls = true;
+  try {
+    const p = req.call(el);
+    if (p && p.then) p.then(() => {
+      if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {});
+    }).catch(() => {});
+  } catch (e) { showToast('全屏失败'); }
+}
+
+function showHeart(x, y) {
+  const h = document.createElement('div');
+  h.className = 'heart-pop';
+  h.innerHTML = '<svg viewBox="0 0 24 24" fill="#fff"><path d="M12 21.2l-1.4-1.3C5.5 15.4 2.2 12.3 2.2 8.6 2.2 5.6 4.6 3.2 7.6 3.2c1.7 0 3.3.8 4.4 2.1 1.1-1.3 2.7-2.1 4.4-2.1 3 0 5.4 2.4 5.4 5.4 0 3.7-3.3 6.8-8.4 11.3z"/></svg>';
+  h.style.left = x + 'px'; h.style.top = y + 'px';
+  document.body.appendChild(h);
+  setTimeout(() => h.remove(), 760);
+}
+
+function toggleLike(video, btn, countEl) {
+  const id = video.id;
+  let on;
+  if (state.liked[id]) { delete state.liked[id]; on = false; }
+  else { state.liked[id] = Object.assign({}, video, { savedAt: Date.now() }); on = true; }
+  saveStore(KEY_LIKE, state.liked);
+  if (btn) {
+    btn.classList.toggle('liked', on);
+    if (countEl) countEl.textContent = fmtCount(video.likes + (on ? 1 : 0));
+  }
+  renderProfile();
+  return on;
+}
+function toggleFav(video, btn) {
+  const id = video.id;
+  let on;
+  if (state.faved[id]) { delete state.faved[id]; on = false; }
+  else { state.faved[id] = Object.assign({}, video, { savedAt: Date.now() }); on = true; }
+  saveStore(KEY_FAV, state.faved);
+  if (btn) btn.classList.toggle('faved', on);
+  renderProfile();
+  return on;
+}function appendSlide(video) {
+  const liked = !!state.liked[video.id];
+  const faved = !!state.faved[video.id];
+
+  const slide = document.createElement('div');
+  slide.className = 'slide';
+  slide._video = video;
+  slide.innerHTML =
+    '<video preload="metadata" loop playsinline webkit-playsinline src="' + escapeHtml(video.url) + '"></video>' +
+    '<div class="pause-indicator"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8.2 4.9v14.2a.9.9 0 0 0 1.38.76l11-7.1a.9.9 0 0 0 0-1.52l-11-7.1A.9.9 0 0 0 8.2 4.9z"/></svg></div>' +
+    '<div class="actions-dock">' +
+      '<button class="settings-btn" aria-label="展开操作">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' +
+          '<circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 8.97 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.88 1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 8.97a1.7 1.7 0 0 0-.34-1.88l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.88.34H9a1.7 1.7 0 0 0 1.03-1.56V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.88V9c.14.61.66 1.03 1.29 1.03H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51.97z"/>' +
+        '</svg>' +
+      '</button>' +
+      '<div class="action-list">' +
+        // DOM顺序（从顶到底）：上一个 -> 下一个 -> 点赞 -> 收藏 -> 静音 -> 刷新
+        '<div class="action-group">' +
+          '<button class="action-btn prev-btn" aria-label="上一个视频">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg>' +
+          '</button>' +
+          '<span class="action-count">上一个</span>' +
+        '</div>' +
+        '<div class="action-group">' +
+          '<button class="action-btn next-btn" aria-label="下一个视频">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>' +
+          '</button>' +
+          '<span class="action-count">下一个</span>' +
+        '</div>' +
+        '<div class="action-group">' +
+          '<button class="action-btn like-btn' + (liked ? ' liked' : '') + '" aria-label="点赞">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M12 20.4S3.6 14.9 3.6 9.2A4.7 4.7 0 0 1 12 6a4.7 4.7 0 0 1 8.4 3.2c0 5.7-8.4 11.2-8.4 11.2z"/></svg>' +
+          '</button>' +
+          '<span class="action-count like-count">' + fmtCount(video.likes + (liked ? 1 : 0)) + '</span>' +
+        '</div>' +
+        '<div class="action-group">' +
+          '<button class="action-btn fav-btn' + (faved ? ' faved' : '') + '" aria-label="收藏">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M12 3.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z"/></svg>' +
+          '</button>' +
+          '<span class="action-count">收藏</span>' +
+        '</div>' +
+        '<div class="action-group">' +
+          '<button class="action-btn mute-btn' + (state.muted ? ' muted' : '') + '" aria-label="声音">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6.5 9H3v6h3.5L11 19z"/><path class="wave" d="M15.4 8.8a4.6 4.6 0 0 1 0 6.4"/><path class="wave" d="M18.4 6.2a8.6 8.6 0 0 1 0 11.6"/><path class="slash" d="M4.5 4.5l15 15"/></svg>' +
+          '</button>' +
+        '</div>' +
+        '<div class="action-group">' +
+          '<button class="action-btn refresh-btn" aria-label="刷新">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>' +
+          '</button>' +
+          '<span class="action-count">刷新</span>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="progress"><div class="progress-track"><div class="progress-fill"></div></div></div>' +
+    '<button class="fullscreen-btn" aria-label="全屏播放">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' +
+        '<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/>' +
+        '<path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>' +
+      '</svg><span>全屏</span>' +
+    '</button>';
+
+  const videoEl = slide.querySelector('video');
+  const actionsDock = slide.querySelector('.actions-dock');
+  const settingsBtn = slide.querySelector('.settings-btn');
+  const prevBtn = slide.querySelector('.prev-btn');
+  const nextBtn = slide.querySelector('.next-btn');
+  const likeBtn = slide.querySelector('.like-btn');
+  const favBtn = slide.querySelector('.fav-btn');
+  const muteBtn = slide.querySelector('.mute-btn');
+  const likeCount = slide.querySelector('.like-count');
+  const progressEl = slide.querySelector('.progress');
+  const fillEl = slide.querySelector('.progress-fill');
+  const refreshBtn = slide.querySelector('.refresh-btn');
+  const fullscreenBtn = slide.querySelector('.fullscreen-btn');
+
+  videoEl.muted = state.muted;
+  videoEl.playbackRate = state.speed;
+
+  settingsBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    state.actionsOpen = !state.actionsOpen;
+    actionsDock.classList.toggle('open', state.actionsOpen);
+  });
+
+  videoEl.addEventListener('click', () => {
+    if (state.actionsOpen) {
+      state.actionsOpen = false;
+      actionsDock.classList.remove('open');
+    }
+  });
+
+  const applyOrientation = () => {
+    if (videoEl.videoWidth && videoEl.videoHeight) {
+      slide.classList.toggle('is-landscape', videoEl.videoWidth > videoEl.videoHeight);
+    }
+  };
+  videoEl.addEventListener('loadedmetadata', applyOrientation);
+  if (videoEl.readyState >= 1) applyOrientation();
+
+  videoEl.addEventListener('play', () => slide.classList.remove('paused'));
+  videoEl.addEventListener('pause', () => slide.classList.add('paused'));
+
+  videoEl.addEventListener('ended', () => {
+    const nextIdx = state.current + 1;
+    if (nextIdx < feedEl.children.length) {
+      feedEl.scrollTo({ top: nextIdx * feedEl.clientHeight, behavior: 'smooth' });
+    } else { loadMore(3); }
+  });
+
+  let tapCount = 0, tapTimer = null, longPressTimer = null, longPressTime = 0;
+  videoEl.addEventListener('pointerdown', (e) => {
+    if (e.button !== undefined && e.button !== 0) return;
+    const startX = e.clientX, startY = e.clientY;
+    const cancel = () => {
+      clearTimeout(longPressTimer); longPressTimer = null;
+      videoEl.removeEventListener('pointermove', onMove);
+      videoEl.removeEventListener('pointerup', cancel);
+      videoEl.removeEventListener('pointercancel', cancel);
+    };
+    const onMove = (e2) => {
+      if (Math.abs(e2.clientX - startX) > 12 || Math.abs(e2.clientY - startY) > 12) cancel();
+    };
+    videoEl.addEventListener('pointermove', onMove);
+    videoEl.addEventListener('pointerup', cancel);
+    videoEl.addEventListener('pointercancel', cancel);
+    longPressTimer = setTimeout(() => {
+      cancel(); longPressTime = Date.now();
+      if (tapTimer) { clearTimeout(tapTimer); tapTimer = null; tapCount = 0; }
+      openSheet(video, videoEl);
+    }, 550);
+  });
+
+  videoEl.addEventListener('click', (e) => {
+    if (Date.now() - longPressTime < 400) return;
+    if (settingsSheet.classList.contains('active') || dateSheet.classList.contains('active')) return;
+    tapCount++;
+    if (tapCount === 1) {
+      tapTimer = setTimeout(() => {
+        tapCount = 0; tapTimer = null;
+        if (videoEl.paused) tryPlay(videoEl); else videoEl.pause();
+      }, 280);
+    } else {
+      if (tapTimer) { clearTimeout(tapTimer); tapTimer = null; }
+      tapCount = 0;
+      const on = toggleLike(video, likeBtn, likeCount);
+      if (on) showHeart(e.clientX, e.clientY);
+    }
+  });
+
+  videoEl.addEventListener('timeupdate', () => {
+    if (!videoEl.duration) return;
+    fillEl.style.width = (videoEl.currentTime / videoEl.duration * 100) + '%';
+  }, { passive: true });
+
+  let dragging = false;
+  const seekTo = (clientX) => {
+    const rect = progressEl.getBoundingClientRect();
+    const p = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    if (videoEl.duration) videoEl.currentTime = p * videoEl.duration;
+    fillEl.style.width = (p * 100) + '%';
+  };
+  progressEl.addEventListener('pointerdown', (e) => {
+    e.stopPropagation(); e.preventDefault();
+    dragging = true; progressEl.classList.add('dragging');
+    try { progressEl.setPointerCapture(e.pointerId); } catch (err) {}
+    seekTo(e.clientX);
+  });
+  progressEl.addEventListener('pointermove', (e) => {
+    if (!dragging) return; e.stopPropagation(); seekTo(e.clientX);
+  });
+  const endDrag = (e) => {
+    if (!dragging) return;
+    dragging = false; progressEl.classList.remove('dragging');
+    try { progressEl.releasePointerCapture(e.pointerId); } catch (err) {}
+  };
+  progressEl.addEventListener('pointerup', endDrag);
+  progressEl.addEventListener('pointercancel', endDrag);
+
+  /* 新增：上一个 / 下一个视频逻辑 */
+  prevBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const prevIdx = state.current - 1;
+    if (prevIdx >= 0) {
+      feedEl.scrollTo({ top: prevIdx * feedEl.clientHeight, behavior: 'smooth' });
+    } else {
+      showToast('已经是第一个视频了');
+    }
+  });
+
+  nextBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const nextIdx = state.current + 1;
+    if (nextIdx < feedEl.children.length) {
+      feedEl.scrollTo({ top: nextIdx * feedEl.clientHeight, behavior: 'smooth' });
+    } else {
+      showToast('加载中…');
+      loadMore(3).then(() => {
+        if (nextIdx < feedEl.children.length) {
+          feedEl.scrollTo({ top: nextIdx * feedEl.clientHeight, behavior: 'smooth' });
+        }
+      });
+    }
+  });
+
+  likeBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleLike(video, likeBtn, likeCount); });
+  favBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const on = toggleFav(video, favBtn);
+    showToast(on ? '已收藏' : '已取消收藏');
+  });
+  muteBtn.addEventListener('click', (e) => { e.stopPropagation(); state.muted = !state.muted; applyMute(); });
+  refreshBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    refreshBtn.classList.add('spinning');
+    setTimeout(() => refreshBtn.classList.remove('spinning'), 600);
+    hardRefresh();
+  });
+  fullscreenBtn.addEventListener('click', (e) => { e.stopPropagation(); enterFullscreenLandscape(videoEl); });
+
+  feedEl.appendChild(slide);
+}
+
+function hardRefresh() {
+  closeAllSheets(); pauseAll();
+  feedEl.innerHTML = ''; state.videos = []; state.current = 0;
+  state.actionsOpen = false;
+  feedEl.scrollTop = 0;
+  feedLoadingEl.classList.add('show');
+  (async () => {
+    try {
+      const first = await fetchRandomVideo();
+      state.videos.push(first); appendSlide(first);
+      state.current = 0; updatePlayback(); loadMore(4);
+    } catch (e) { showToast('刷新失败，请重试'); }
+    finally { feedLoadingEl.classList.remove('show'); }
+  })();
+}function applyMute() {
+    feedEl.querySelectorAll('video').forEach(v => { v.muted = state.muted; });
+    feedEl.querySelectorAll('.mute-btn').forEach(b => b.classList.toggle('muted', state.muted));
+    updateSheetUI();
+  }
+
+  function updatePlayback() {
+    const slides = feedEl.children;
+    for (let i = 0; i < slides.length; i++) {
+      slides[i].classList.toggle('current-slide', i === state.current);
+    }
+    if (splashVideoOverlay.classList.contains('active')) return;
+    for (let i = 0; i < slides.length; i++) {
+      const v = slides[i].querySelector('video');
+      if (!v) continue;
+      if (i === state.current) { v.playbackRate = state.speed; tryPlay(v); }
+      else v.pause();
+    }
+  }
+  function pauseAll() { feedEl.querySelectorAll('video').forEach(v => v.pause()); }
+
+  feedEl.addEventListener('scroll', () => {
+    if (scrollRaf) return;
+    scrollRaf = requestAnimationFrame(() => {
+      scrollRaf = null;
+      const h = feedEl.clientHeight;
+      if (!h || !feedEl.children.length) return;
+      const idx = Math.round(feedEl.scrollTop / h);
+      if (idx !== state.current) {
+        state.current = idx;
+        updatePlayback();
+        state.actionsOpen = false;
+        feedEl.querySelectorAll('.actions-dock.open').forEach(el => el.classList.remove('open'));
+      }
+      if (feedEl.scrollTop + h * 2 > feedEl.scrollHeight) loadMore(3);
+    });
+  }, { passive: true });
+
+  function resetFeed() {
+    closeAllSheets(); pauseAll();
+    feedEl.innerHTML = ''; state.videos = []; state.current = 0;
+    state.actionsOpen = false;
+    feedEl.scrollTop = 0;
+  }
+
+  function doSearch() {
+    const keyword = searchInput.value.trim();
+    if (!keyword) { showToast('请输入搜索关键词'); searchInput.focus(); return; }
+    searchInput.blur();
+    pauseAll();
+    window.open('https://www.douyin.com/search/' + encodeURIComponent(keyword), '_blank');
+    showToast('正在跳转搜索…');
+    cancelSearch();
+  }
+  searchSubmitBtn.addEventListener('click', doSearch);
+  searchInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); doSearch(); } });
+  searchBox.addEventListener('click', () => {
+    if (!homeTop.classList.contains('searching')) {
+      homeTop.classList.add('searching');
+      setTimeout(() => searchInput.focus(), 100);
+    }
+  });
+  function cancelSearch() {
+    homeTop.classList.remove('searching');
+    searchInput.value = '';
+    searchInput.blur();
+    updatePlayback();
+  }
+  searchCancelBtn.addEventListener('click', cancelSearch);
+
+  function updateCategoryUI() {
+    categoryTabs.querySelectorAll('.cat-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.cat === state.category);
+    });
+  }
+  async function switchCategory(cat) {
+    if (state.category === cat || switching) return;
+    state.category = cat; updateCategoryUI(); switching = true;
+    searchInput.blur(); resetFeed();
+    feedLoadingEl.classList.add('show');
+    try {
+      const first = await fetchRandomVideo();
+      state.videos.push(first); appendSlide(first);
+      state.current = 0; updatePlayback(); loadMore(4);
+    } catch (e) { showToast('加载失败，请稍后重试'); }
+    finally { feedLoadingEl.classList.remove('show'); switching = false; }
+  }
+  categoryTabs.addEventListener('click', (e) => {
+    const btn = e.target.closest('.cat-btn');
+    if (!btn) return;
+    switchCategory(btn.dataset.cat);
+  });
+
+  function dateLabel(ts) {
+    const d = new Date(ts);
+    return d.getFullYear() + '年' + pad2(d.getMonth() + 1) + '月' + pad2(d.getDate()) + '日';
+  }
+
+  function renderBox() {
+    const store = state.boxTab === 'like' ? state.liked : state.faved;
+    let items = Object.values(store).map(v => { if (!v.savedAt) v.savedAt = 0; return v; });
+    if (boxFilterDate) {
+      items = items.filter(v => {
+        const d = new Date(v.savedAt || 0);
+        return d.getFullYear() === boxFilterDate.y
+          && d.getMonth() === boxFilterDate.m
+          && d.getDate() === boxFilterDate.d;
+      });
+    }
+    boxSearchEl.classList.toggle('has-filter', !!boxFilterDate);
+    boxSearchLabel.textContent = boxFilterDate
+      ? (boxFilterDate.y + '年' + (boxFilterDate.m + 1) + '月' + boxFilterDate.d + '日')
+      : '按日期查找';
+    if (!items.length) {
+      boxItems = [];
+      boxListEl.innerHTML =
+        '<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>' +
+        '<div>' + (boxFilterDate ? '这一天没有记录' : (state.boxTab === 'like' ? '还没有点赞任何视频' : '还没有收藏任何视频')) + '</div></div>';
+      return;
+    }
+    const groups = {};
+    items.forEach(v => {
+      const key = v.savedAt ? dateLabel(v.savedAt) : '更早';
+      if (!groups[key]) groups[key] = { ts: v.savedAt || 0, items: [] };
+      groups[key].items.push(v);
+    });
+    const keys = Object.keys(groups).sort((a, b) => groups[b].ts - groups[a].ts);
+    boxItems = [];
+    let html = '';
+    keys.forEach(key => {
+      html += '<div class="box-date-title">' + escapeHtml(key) + '</div>';
+      groups[key].items.forEach(v => {
+        const i = boxItems.length;
+        boxItems.push(v);
+        html +=
+          '<div class="box-item" data-index="' + i + '">' +
+            '<div class="box-thumb">' + (v.cover ? '<img src="' + escapeHtml(v.cover) + '" alt="" loading="lazy">' : '') + '</div>' +
+            '<div class="box-meta"><div class="box-item-title">' + escapeHtml(v.title) + '</div>' +
+            '<div class="box-item-author">@' + escapeHtml(v.author) + '</div></div>' +
+            '<button class="box-remove" aria-label="移除"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>' +
+          '</div>';
+      });
+    });
+    boxListEl.innerHTML = html;
+  }
+
+  boxListEl.addEventListener('click', (e) => {
+    const itemEl = e.target.closest('.box-item');
+    if (!itemEl) return;
+    const idx = Number(itemEl.dataset.index);
+    const video = boxItems[idx];
+    if (!video) return;
+    if (e.target.closest('.box-remove')) {
+      if (state.boxTab === 'like') { delete state.liked[video.id]; saveStore(KEY_LIKE, state.liked); }
+      else { delete state.faved[video.id]; saveStore(KEY_FAV, state.faved); }
+      refreshFeedButtons(video.id); renderBox(); renderProfile();
+      return;
+    }
+    openPlayer(video);
+  });
+
+  function refreshFeedButtons(id) {
+    for (const slide of feedEl.children) {
+      const video = slide._video;
+      if (!video || video.id !== id) continue;
+      const liked = !!state.liked[id], faved = !!state.faved[id];
+      slide.querySelector('.like-btn').classList.toggle('liked', liked);
+      slide.querySelector('.fav-btn').classList.toggle('faved', faved);
+      slide.querySelector('.like-count').textContent = fmtCount(video.likes + (liked ? 1 : 0));
+    }
+  }
+  function refreshFeedButtonsAll() {
+    for (const slide of feedEl.children) {
+      const video = slide._video;
+      if (!video) continue;
+      const liked = !!state.liked[video.id], faved = !!state.faved[video.id];
+      slide.querySelector('.like-btn').classList.toggle('liked', liked);
+      slide.querySelector('.fav-btn').classList.toggle('faved', faved);
+      slide.querySelector('.like-count').textContent = fmtCount(video.likes + (liked ? 1 : 0));
+    }
+  }
+
+  function renderDatePicker() {
+    yearLabel.textContent = datePicker.year + '年';
+    yearPrev.disabled = datePicker.year <= datePicker.minYear;
+    yearNext.disabled = datePicker.year >= datePicker.maxYear;
+    let html = '';
+    for (let i = 0; i < 12; i++) {
+      html += '<button class="month-btn ' + (i === datePicker.month ? 'active' : '') + '" data-m="' + i + '">' + (i + 1) + '月</button>';
+    }
+    monthGrid.innerHTML = html;
+    const daysInMonth = new Date(datePicker.year, datePicker.month + 1, 0).getDate();
+    const firstWeekday = new Date(datePicker.year, datePicker.month, 1).getDay();
+    let h2 = '';
+    for (let i = 0; i < firstWeekday; i++) h2 += '<button class="day-btn empty"></button>';
+    for (let d = 1; d <= daysInMonth; d++) {
+      h2 += '<button class="day-btn ' + (d === datePicker.day ? 'active' : '') + '" data-d="' + d + '">' + d + '</button>';
+    }
+    dayGrid.innerHTML = h2;
+  }
+  function openDateSheet() {
+    closeSettings();
+    if (boxFilterDate) { datePicker.year = boxFilterDate.y; datePicker.month = boxFilterDate.m; datePicker.day = boxFilterDate.d; }
+    else { const n = new Date(); datePicker.year = n.getFullYear(); datePicker.month = n.getMonth(); datePicker.day = n.getDate(); }
+    if (datePicker.year > datePicker.maxYear) datePicker.year = datePicker.maxYear;
+    if (datePicker.year < datePicker.minYear) datePicker.year = datePicker.minYear;
+    renderDatePicker();
+    sheetMask.classList.add('active'); dateSheet.classList.add('active');
+  }
+  function closeDateSheet() {
+    dateSheet.classList.remove('active');
+    if (!settingsSheet.classList.contains('active')) sheetMask.classList.remove('active');
+  }
+  boxSearchEl.addEventListener('click', openDateSheet);
+  yearPrev.addEventListener('click', () => {
+    if (datePicker.year > datePicker.minYear) {
+      datePicker.year--;
+      const maxD = new Date(datePicker.year, datePicker.month + 1, 0).getDate();
+      if (datePicker.day > maxD) datePicker.day = maxD;
+      renderDatePicker();
+    }
+  });
+  yearNext.addEventListener('click', () => {
+    if (datePicker.year < datePicker.maxYear) {
+      datePicker.year++;
+      const maxD = new Date(datePicker.year, datePicker.month + 1, 0).getDate();
+      if (datePicker.day > maxD) datePicker.day = maxD;
+      renderDatePicker();
+    }
+  });
+  monthGrid.addEventListener('click', (e) => {
+    const btn = e.target.closest('.month-btn');
+    if (!btn) return;
+    datePicker.month = Number(btn.dataset.m);
+    const maxD = new Date(datePicker.year, datePicker.month + 1, 0).getDate();
+    if (datePicker.day > maxD) datePicker.day = maxD;
+    renderDatePicker();
+  });
+  dayGrid.addEventListener('click', (e) => {
+    const btn = e.target.closest('.day-btn');
+    if (!btn || btn.classList.contains('empty')) return;
+    datePicker.day = Number(btn.dataset.d);
+    renderDatePicker();
+  });
+  dateClear.addEventListener('click', () => { boxFilterDate = null; closeDateSheet(); renderBox(); });
+  dateConfirm.addEventListener('click', () => {
+    boxFilterDate = { y: datePicker.year, m: datePicker.month, d: datePicker.day };
+    closeDateSheet(); renderBox();
+  });
+
+  function openSheet(video, videoEl) {
+    closeDateSheet();
+    sheetVideo = video; sheetVideoEl = videoEl;
+    videoEl.pause(); updateSheetUI();
+    sheetMask.classList.add('active'); settingsSheet.classList.add('active');
+  }
+  function closeSettings() {
+    settingsSheet.classList.remove('active');
+    if (!dateSheet.classList.contains('active')) sheetMask.classList.remove('active');
+    sheetVideo = null; sheetVideoEl = null;
+  }
+  function closeAllSheets() {
+    settingsSheet.classList.remove('active'); dateSheet.classList.remove('active');
+    sheetMask.classList.remove('active');
+    sheetVideo = null; sheetVideoEl = null;
+  }
+  function updateSheetUI() {
+    if (!sheetVideo) return;
+    const v = sheetVideo;
+    const currentSpeed = sheetVideoEl ? (sheetVideoEl.playbackRate || 1) : state.speed;
+    speedList.querySelectorAll('.speed-btn').forEach(btn => {
+      btn.classList.toggle('active', parseFloat(btn.dataset.speed) === currentSpeed);
+    });
+    $('sheetMuteLabel').textContent = state.muted ? '取消静音' : '静音';
+    $('sheetMute').classList.toggle('active', state.muted);
+    const faved = !!state.faved[v.id];
+    $('sheetFavLabel').textContent = faved ? '取消收藏' : '收藏';
+    $('sheetFav').classList.toggle('active', faved);
+    const liked = !!state.liked[v.id];
+    $('sheetLikeLabel').textContent = liked ? '取消点赞' : '点赞';
+    $('sheetLike').classList.toggle('active', liked);
+  }
+  $('sheetClose').addEventListener('click', closeSettings);
+  speedList.addEventListener('click', (e) => {
+    const btn = e.target.closest('.speed-btn');
+    if (!btn) return;
+    const speed = parseFloat(btn.dataset.speed);
+    state.speed = speed;
+    feedEl.querySelectorAll('video').forEach(v => { v.playbackRate = speed; });
+    if (sheetVideoEl) sheetVideoEl.playbackRate = speed;
+    speedList.querySelectorAll('.speed-btn').forEach(b => b.classList.toggle('active', b === btn));
+    if (sheetVideoEl) tryPlay(sheetVideoEl);
+    showToast('倍速：' + speed + 'x');
+  });
+  $('sheetMute').addEventListener('click', () => { state.muted = !state.muted; applyMute(); });
+  $('sheetFav').addEventListener('click', () => {
+    if (!sheetVideo) return;
+    const id = sheetVideo.id;
+    if (state.faved[id]) delete state.faved[id];
+    else state.faved[id] = Object.assign({}, sheetVideo, { savedAt: Date.now() });
+    saveStore(KEY_FAV, state.faved); refreshFeedButtons(id); updateSheetUI(); renderProfile();
+    showToast(state.faved[id] ? '已收藏' : '已取消收藏');
+  });
+  $('sheetLike').addEventListener('click', () => {
+    if (!sheetVideo) return;
+    const id = sheetVideo.id;
+    if (state.liked[id]) delete state.liked[id];
+    else state.liked[id] = Object.assign({}, sheetVideo, { savedAt: Date.now() });
+    saveStore(KEY_LIKE, state.liked); refreshFeedButtons(id); updateSheetUI(); renderProfile();
+    showToast(state.liked[id] ? '已点赞' : '已取消点赞');
+  });
+  $('sheetCopy').addEventListener('click', async () => {
+    if (!sheetVideo) return;
+    try { await navigator.clipboard.writeText(sheetVideo.url); showToast('链接已复制'); }
+    catch (err) { showToast('复制失败'); }
+  });
+  sheetMask.addEventListener('click', () => {
+    if (dateSheet.classList.contains('active')) closeDateSheet();
+    else closeSettings();
+  });
+
+  const playerOverlay = $('playerOverlay');
+  const overlayVideo = $('overlayVideo');
+  function openPlayer(video) {
+    overlayVideo.muted = false;
+    overlayVideo.src = video.url;
+    playerOverlay.classList.add('active');
+    const p = overlayVideo.play(); if (p && p.catch) p.catch(() => {});
+  }
+  function closePlayer() {
+    overlayVideo.pause(); overlayVideo.removeAttribute('src'); overlayVideo.load();
+    playerOverlay.classList.remove('active');
+  }
+  $('overlayClose').addEventListener('click', closePlayer);
+
+  let currentIndex = 0;
+  let pointerDown = false, moved = false;
+  let startClientX = 0, startThumbX = 0, thumbX = 0, downTabEl = null;
+  let longPressTimer = null;
+
+  function getItemW() { return (tabbar.getBoundingClientRect().width - 10) / tabs.length; }
+  function getInnerW() { return tabbar.getBoundingClientRect().width - 10; }
+  function setThumbByIndex(idx, animate) {
+    currentIndex = idx;
+    const itemW = getItemW();
+    if (!animate) tabbar.classList.add('dragging');
+    tabThumb.style.transform = 'translateX(' + idx * itemW + 'px)';
+    if (!animate) { void tabThumb.offsetWidth; tabbar.classList.remove('dragging'); }
+  }
+  function highlightTab(idx) { tabs.forEach((t, i) => t.classList.toggle('active', i === idx)); }
+  function xToIndex(x) {
+    const itemW = getItemW();
+    if (itemW <= 0) return 0;
+    return Math.max(0, Math.min(tabs.length - 1, Math.round(x / itemW)));
+  }
+
+  tabbar.addEventListener('pointerdown', (e) => {
+    pointerDown = true; moved = false;
+    startClientX = e.clientX;
+    downTabEl = e.target.closest('.tabbar-item');
+    startThumbX = currentIndex * getItemW();
+    thumbX = startThumbX;
+    try { tabbar.setPointerCapture(e.pointerId); } catch (err) {}
+    clearTimeout(longPressTimer);
+    longPressTimer = setTimeout(() => {
+      if (pointerDown && !moved) {
+        tabbar.classList.add('pressing');
+        if (navigator.vibrate) navigator.vibrate(8);
+      }
+    }, 200);
+  });
+
+  tabbar.addEventListener('pointermove', (e) => {
+    if (!pointerDown) return;
+    const dx = e.clientX - startClientX;
+    if (!moved && Math.abs(dx) < 6) return;
+    if (!moved) {
+      moved = true;
+      clearTimeout(longPressTimer);
+      tabbar.classList.remove('pressing');
+      tabbar.classList.add('dragging');
+    }
+    const itemW = getItemW(), innerW = getInnerW();
+    let x = startThumbX + dx;
+    x = Math.max(0, Math.min(innerW - itemW, x));
+    thumbX = x;
+    tabThumb.style.transform = 'translateX(' + x + 'px)';
+    highlightTab(xToIndex(x));
+  });
+
+  function endPointer(e) {
+    if (!pointerDown) return;
+    pointerDown = false;
+    clearTimeout(longPressTimer);
+    tabbar.classList.remove('pressing');
+    try { tabbar.releasePointerCapture(e.pointerId); } catch (err) {}
+    tabbar.classList.remove('dragging');
+    let idx;
+    if (moved) idx = xToIndex(thumbX);
+    else if (downTabEl) idx = tabs.indexOf(downTabEl);
+    else idx = currentIndex;
+    if (idx < 0 || idx >= tabs.length) idx = currentIndex;
+    moved = false; downTabEl = null;
+    switchPage(tabs[idx].dataset.page);
+  }
+  tabbar.addEventListener('pointerup', endPointer);
+  tabbar.addEventListener('pointercancel', endPointer);
+  window.addEventListener('resize', () => setThumbByIndex(currentIndex, false));
+
+  function switchPage(name) {
+    closeAllSheets();
+    state.actionsOpen = false;
+    feedEl.querySelectorAll('.actions-dock.open').forEach(el => el.classList.remove('open'));
+    const idx = tabs.findIndex(t => t.dataset.page === name);
+    if (idx < 0) return;
+    highlightTab(idx); setThumbByIndex(idx, true);
+    document.querySelectorAll('.page').forEach(p => { p.classList.toggle('active', p.dataset.page === name); });
+    setSurface(name === 'home' ? 'video' : 'app');
+    if (name === 'home') updatePlayback(); else pauseAll();
+    if (name === 'box') renderBox();
+    if (name === 'profile') renderProfile();
+  }
+  document.querySelectorAll('.seg-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.seg-btn').forEach(b => b.classList.toggle('active', b === btn));
+      state.boxTab = btn.dataset.tab; renderBox();
+    });
+  });
+
+  function hideSplash() {
+    splashEl.classList.add('hide');
+    setTimeout(() => { splashEl.style.display = 'none'; }, 260);
+  }
+  function showSplashError() {
+    splashSpinner.style.display = 'none';
+    splashText.textContent = '视频加载失败，请检查网络';
+    retryBtn.style.display = 'block';
+  }
+
+  async function init() {
+    applyTheme(localStorage.getItem(KEY_THEME) || 'system');
+    applyBrightness(localStorage.getItem(KEY_BRIGHT) || '100');
+    renderProfile();
+    setSurface('video');
+    playSplashVideo();
+    splashSpinner.style.display = 'block';
+    splashText.textContent = '正在加载视频…';
+    retryBtn.style.display = 'none';
+    try {
+      const first = await fetchRandomVideo();
+      state.videos.push(first); appendSlide(first);
+      hideSplash(); state.current = 0; updatePlayback(); loadMore(4);
+    } catch (e) { showSplashError(); }
+  }
+  retryBtn.addEventListener('click', () => {
+    feedEl.innerHTML = ''; state.videos = []; state.current = 0; init();
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      pauseAll();
+      if (splashVideoOverlay.classList.contains('active')) {
+        try { splashVideo.pause(); } catch (e) {}
+      }
+    } else {
+      if (splashVideoOverlay.classList.contains('active')) {
+        const p = splashVideo.play(); if (p && p.catch) p.catch(() => {});
+      } else { updatePlayback(); }
+    }
+  });
+
+  setThumbByIndex(0, false);
+  window.addEventListener('load', () => setThumbByIndex(0, false));
+  init();
+})();
+</script>
+</body>
+</html>
